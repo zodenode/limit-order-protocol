@@ -10,6 +10,10 @@ import "./libraries/MakerTraitsLib.sol";
 import "./libraries/ExtensionLib.sol";
 import "./helpers/AmountCalculator.sol";
 
+/**
+ * @title OrderLib
+ * @notice A library for handling orders, including hashing, amount calculations, and extension validation.
+ */
 library OrderLib {
     using AddressLib for Address;
     using MakerTraitsLib for MakerTraits;
@@ -33,6 +37,12 @@ library OrderLib {
         ")"
     );
 
+    /**
+     * @notice Calculate the hash of an order.
+     * @param order The order struct.
+     * @param domainSeparator The EIP-712 domain separator.
+     * @return result The order hash.
+     */
     function hash(IOrderMixin.Order calldata order, bytes32 domainSeparator) internal pure returns(bytes32 result) {
         bytes32 typehash = _LIMIT_ORDER_TYPEHASH;
         assembly ("memory-safe") { // solhint-disable-line no-inline-assembly
@@ -46,6 +56,15 @@ library OrderLib {
         result = ECDSA.toTypedDataHash(domainSeparator, result);
     }
 
+    /**
+     * @notice Calculate the making amount based on the requested taking amount.
+     * @param order The order struct.
+     * @param extension The extension data.
+     * @param requestedTakingAmount The requested taking amount.
+     * @param remainingMakingAmount The remaining making amount.
+     * @param orderHash The order hash.
+     * @return The calculated making amount.
+     */
     function calculateMakingAmount(
         IOrderMixin.Order calldata order,
         bytes calldata extension,
@@ -60,6 +79,16 @@ library OrderLib {
         }
         return _callGetter(getter, requestedTakingAmount, remainingMakingAmount, orderHash);
     }
+
+    /**
+     * @notice Calculate the taking amount based on the requested making amount.
+     * @param order The order struct.
+     * @param extension The extension data.
+     * @param requestedMakingAmount The requested making amount.
+     * @param remainingMakingAmount The remaining making amount.
+     * @param orderHash The order hash.
+     * @return The calculated taking amount.
+     */
 
     function calculateTakingAmount(
         IOrderMixin.Order calldata order,
@@ -76,6 +105,14 @@ library OrderLib {
         return _callGetter(getter, requestedMakingAmount, remainingMakingAmount, orderHash);
     }
 
+    /**
+     * @dev Call the getter function for calculating the making/taking amount.
+     * @param getter The getter function address and data.
+     * @param requestedAmount The requested making or taking amount.
+     * @param remainingMakingAmount The remaining making amount.
+     * @param orderHash The order hash.
+     * @return The calculated making/taking amount.
+     */
     function _callGetter(
         bytes calldata getter,
         uint256 requestedAmount,
@@ -89,6 +126,11 @@ library OrderLib {
         return abi.decode(result, (uint256));
     }
 
+    /**
+     * @notice Validate the order extension.
+     * @param order The order struct.
+     * @param extension The extension data.
+     */
     function validateExtension(IOrderMixin.Order calldata order, bytes calldata extension) internal pure {
         if (order.makerTraits.hasExtension()) {
             if (extension.length == 0) revert MissingOrderExtension();
